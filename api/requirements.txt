@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+boto3
+python-jose[cryptography]
+python-multipart
+passlib[bcrypt]
+pydantic-settings
