@@ -1,3 +1,5 @@
+# Job Objects in Kubernetes, contrary to deployments, are ephemeral. 
+# Once they complete their task they go away. Perfect for creating the buckets.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -11,6 +13,7 @@ spec:
         - name: mc
           image: minio/mc:latest
           command: ["/bin/sh", "-c"]
+          # Creates the Buckets on the MinIO server at the infrastructure level.
           args:
             - |
               mc alias set minio http://minio-service.storage.svc.cluster.local:9000 minioadmin minioadmin123

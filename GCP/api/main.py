@@ -25,7 +25,9 @@ import uuid
 # Runs before the API starts
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    ensure_bucket()
+    missing = ensure_bucket() 
+    if missing:
+        raise RuntimeError(f"Required buckets missing: {missing}. Is the init Job done?")
     yield
 
 

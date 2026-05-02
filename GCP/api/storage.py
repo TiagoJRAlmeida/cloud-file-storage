@@ -24,10 +24,20 @@ s3 = boto3.client(
 )
 
 
-def ensure_bucket():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    required_buckets = ["files", "thumbnails", "tmp"]
     existing = [b["Name"] for b in s3.list_buckets()["Buckets"]]
-    if BUCKET_NAME not in existing:
-        s3.create_bucket(Bucket=BUCKET_NAME)
+    missing = [b for b in required_buckets if b not in existing]
+    if missing:
+        raise RuntimeError(f"Required buckets missing: {missing}. Is the init Job done?")
+    yield
+
+def ensure_bucket():
+    required_buckets = ["files", "thumbnails", "tmp"]
+    existing = [b["Name"] for b in s3.list_buckets()["Buckets"]]
+    missing = [b for b in required_buckets if b not in existing]
+    return missing
 
 
 def upload_file(
