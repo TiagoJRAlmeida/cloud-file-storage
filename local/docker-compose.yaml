@@ -1,0 +1,31 @@
+services:
+  # MinIO Storage Server
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password123
+    volumes:
+      - ./minio/data:/data
+    networks:
+      - private-network
+    command: server /data --console-address ":9001"
+
+  # Python FastAPI REST API
+  api:
+    build: ./api
+    ports:
+      - "8000:8000"
+    environment:
+      - MINIO_ACCESS_KEY=admin
+      - MINIO_SECRET_KEY=password123
+    networks:
+      - private-network
+
+networks:
+  private-network:
+    driver: bridge
