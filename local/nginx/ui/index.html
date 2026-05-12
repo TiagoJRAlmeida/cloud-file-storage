@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FileVault</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/script.js"></script> 
+</head>
+<body>
+
+<header>
+  <div class="logo">FILE<span>VAULT</span></div>
+  <div class="status-bar">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">checking...</span>
+    <span id="logged-in-label" style="color:var(--accent);display:none"></span>
+  </div>
+</header>
+
+<main>
+  <!-- ── Sidebar ── -->
+  <aside>
+    <!-- <div class="section-label">Connection</div>
+    <input type="text" id="api-url" placeholder="API URL  e.g. http://api:8000" value="http://api:8000"/> -->
+
+    <div id="auth-panel">
+      <div class="section-label" style="padding-top:4px">Login</div>
+      <input type="text" id="username" placeholder="username"/>
+      <input type="password" id="password" placeholder="password"/>
+      <button class="btn-primary" onclick="doLogin()">→ Login</button>
+    </div>
+
+    <div id="user-panel" style="display:none; flex-direction:column; gap:10px;">
+      <div class="user-pill">
+        <span class="user-name" id="user-display"></span>
+        <button class="btn-danger" style="width:auto" onclick="doLogout()">logout</button>
+      </div>
+      <div class="quota-bar-wrap">
+        <div class="quota-label">Storage used: <span id="quota-text">—</span></div>
+        <div class="quota-bar"><div class="quota-fill" id="quota-fill" style="width:0%"></div></div>
+      </div>
+
+      <div class="section-label">Upload File</div>
+      <div id="drop-zone" onclick="document.getElementById('file-input').click()"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="handleDrop(event)">
+        <span class="drop-icon">⬆</span>
+        click or drag a file here
+      </div>
+      <input type="file" id="file-input" onchange="uploadSelected()"/>
+
+      <div class="section-label">Share TTL</div>
+      <div class="share-row">
+        <input type="number" id="ttl" value="3600" min="60"/>
+        <label>seconds</label>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── Content ── -->
+  <div class="content">
+    <div class="content-header">
+      <div class="content-title">Files</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="file-count" id="file-count"></span>
+        <button class="btn-sm" onclick="loadFiles()" id="refresh-btn" style="display:none">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div id="log"></div>
+
+    <div class="file-table-wrap" id="file-table-wrap">
+      <div class="empty">
+        <span class="empty-icon">🔒</span>
+        Login to manage your files
+      </div>
+    </div>
+
+    <div class="pagination" id="pagination" style="display:none">
+      <button class="btn-sm" onclick="changePage(-1)">← Prev</button>
+      <span class="page-info" id="page-info"></span>
+      <button class="btn-sm" onclick="changePage(1)">Next →</button>
+    </div>
+  </div>
+</main>
+
+<!-- ── Modal for share URL / metadata ── -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Info</div>
+    <pre id="modal-body"></pre>
+    <div class="modal-actions">
+      <button class="btn-sm" onclick="copyModal()">Copy</button>
+      <button class="btn-ghost" style="width:auto" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

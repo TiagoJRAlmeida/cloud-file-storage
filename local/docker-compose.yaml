@@ -1,0 +1,106 @@
+services:
+  # MinIO Storage Server
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password123
+      - MINIO_PROMETHEUS_AUTH_TYPE=public
+    volumes:
+      - ./minio/data:/data
+    networks:
+      - private-network
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Python FastAPI REST API
+  api:
+    build: ./api
+    environment:
+      - MINIO_ACCESS_KEY=admin
+      - MINIO_SECRET_KEY=password123
+    networks:
+      - private-network
+    depends_on:
+      minio:
+        condition: service_healthy  # waits for minio to actually be ready
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "443:443"
+    networks:
+      - private-network
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/ui:/usr/share/nginx/html:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - api
+      - oauth2-proxy
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN}
+    networks:
+      - private-network
+    depends_on:
+      - nginx
+
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:latest
+    environment:
+      - OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:4180
+      - OAUTH2_PROXY_REVERSE_PROXY=true
+      - OAUTH2_PROXY_COOKIE_SECURE=true
+      - OAUTH2_PROXY_REDIRECT_URL=https://local-storage-dev.t1gs.com/oauth2/callback
+      - OAUTH2_PROXY_PROVIDER=${OAUTH2_PROXY_PROVIDER}
+      - OAUTH2_PROXY_CLIENT_ID=${OAUTH2_PROXY_CLIENT_ID}
+      - OAUTH2_PROXY_CLIENT_SECRET=${OAUTH2_PROXY_CLIENT_SECRET}
+      - OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_PROXY_COOKIE_SECRET}
+      - OAUTH2_PROXY_EMAIL_DOMAINS=*          # or restrict to your domain
+      - OAUTH2_PROXY_UPSTREAMS=http://nginx:8080 # what oauth2-proxy proxies to after auth
+    networks:
+      - private-network
+  
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - private-network
+    depends_on:
+      - minio
+      - api
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      - DS_PROMETHEUS=http://prometheus:9090
+    volumes:
+      - grafana-data:/var/lib/grafana  # persists dashboards and settings
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning  # auto-config
+    networks:
+      - private-network
+    depends_on:
+      - prometheus
+
+volumes:
+  grafana-data:
+
+networks:
+  private-network:
+    driver: bridge

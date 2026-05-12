@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Query
 from fastapi.responses import Response
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from auth import (
     USERS,
     USER_QUOTA,
@@ -20,21 +21,30 @@ from storage import (
     generate_presigned_url,
 )
 import uuid
-
+import time
 
 # Runs before the API starts
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    missing = ensure_bucket() 
-    if missing:
-        raise RuntimeError(f"Required buckets missing: {missing}. Is the init Job done?")
+    ensure_bucket()
     yield
 
 
 app = FastAPI(title="Cloud File Storage API", version="1.0.0", lifespan=lifespan)
 
 
+# --- Prometheus metrics ---
+REQUEST_COUNT = Counter("api_requests_total", "Total requests", ["method", "endpoint", "status"])
+REQUEST_LATENCY = Histogram("api_request_latency_seconds", "Request latency", ["endpoint"])
+
+
 # --- Auth ---
+## Example Login with Curl:
+"""
+curl -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "alice", "password": "password123"}'
+"""
 class LoginRequest(BaseModel):
     username: str
     password: str
@@ -50,14 +60,28 @@ def login(body: LoginRequest):
 
 
 # --- Files ---
+
+## Example Upload of a file with Curl
+"""
+TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "alice", "password": "password123"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+# Then use it in subsequent requests
+curl -X POST http://localhost:8000/files/upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@/home/tiago/pictures/tuff_goose.jpeg"
+"""
 @app.post("/files/upload", tags=["Files"])
 def upload(file: UploadFile = File(...), username: str = Depends(get_current_user)):
+    start = time.time()
     data = file.file.read()
 
     # Quota check
     used = get_user_storage_used(username)
     if used + len(data) > USER_QUOTA:
-        raise HTTPException(status_code=413, detail="Storage quota exceeded")
+        raise HTTPException(status_code=413, detail=f"Storage quota exceeded. Used: {used}. len(data): {len(data)}. USER_QUOTA: {USER_QUOTA}")
 
     file_id = str(uuid.uuid4())
     filename = file.filename or "unnamed"
@@ -72,7 +96,9 @@ def upload(file: UploadFile = File(...), username: str = Depends(get_current_use
         )
     except Exception:
         raise HTTPException(status_code=500, detail="Upload failed")
-
+    
+    REQUEST_LATENCY.labels("/files/upload").observe(time.time() - start)
+    REQUEST_COUNT.labels("POST", "/files/upload", "200").inc()
     return {"file_id": file_id, "filename": file.filename, "size": len(data)}
 
 
@@ -141,3 +167,8 @@ def metadata(file_id: str, username: str = Depends(get_current_user)):
 @app.get("/health", tags=["System"])
 def health():
     return {"status": "ok"}
+
+
+@app.get("/metrics", tags=["System"])
+def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

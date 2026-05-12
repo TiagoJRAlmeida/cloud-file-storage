@@ -8,21 +8,12 @@ kubectl get nodes  # should show 2 nodes as Ready
 ```
 > If an error related to `gke-gcloud-auth-plugin` appears, it means we need to install the plugin. That can be done with the command `gcloud components install gke-gcloud-auth-plugin` 
 
-## Create the namespace and secret
-
-```bash
-kubectl create namespace storage
-
-kubectl create secret generic minio-secret \
-  --from-literal=access-key=minioadmin \
-  --from-literal=secret-key=minioadmin123 \
-  --namespace storage
-```
-
 ## Apply the manifest
 
 ```bash
-kubectl apply -f minio.yaml
+kubectl apply -f storage/
+kubectl apply -f api/
+kubectl apply -f nginx/
 ```
 
 ## Verify if it is running

@@ -9,7 +9,7 @@ import os
 
 
 # This is set on the docker image
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://minio-service:9000")
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://minio:9000")
 MINIO_ACCESS = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET = os.getenv("MINIO_SECRET_KEY", "minioadmin")
 BUCKET_NAME = "files"
@@ -25,10 +25,9 @@ s3 = boto3.client(
 
 
 def ensure_bucket():
-    required_buckets = ["files", "thumbnails", "tmp"]
     existing = [b["Name"] for b in s3.list_buckets()["Buckets"]]
-    missing = [b for b in required_buckets if b not in existing]
-    return missing
+    if BUCKET_NAME not in existing:
+        s3.create_bucket(Bucket=BUCKET_NAME)
 
 
 def upload_file(
