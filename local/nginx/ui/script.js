@@ -168,14 +168,14 @@ async function uploadFile(file) {
     formData.append('file', file);
     try {
         const r = await fetch(`${apiUrl}/files/upload`, {
-        method: 'POST',
-        headers: authHeader(),
-        body: formData
+            method: 'POST',
+            headers: authHeader(),
+            body: formData
         });
         if (!r.ok) {
-        const d = await r.json().catch(() => ({}));
-        log(`Upload failed: ${d.detail || r.status}`, 'err');
-        return;
+            const d = await r.json().catch(() => ({}));
+            log(`Upload failed: ${d.detail || r.status}`, 'err');
+            return;
         }
         const d = await r.json();
         log(`Uploaded "${d.filename}" (${fmt(d.size)})`, 'ok');
@@ -216,7 +216,7 @@ async function shareFile(fileId) {
     const ttl = parseInt(document.getElementById('ttl').value) || 3600;
     try {
         const r = await fetch(`${apiUrl}/files/${fileId}/share?ttl_seconds=${ttl}`, {
-        method: 'POST', headers: authHeader()
+            method: 'POST', headers: authHeader()
         });
         if (!r.ok) { log('Share failed', 'err'); return; }
         const d = await r.json();
