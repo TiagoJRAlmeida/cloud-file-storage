@@ -1,10 +1,17 @@
 # Setup
 
+## Authenticate with gcloud
+
+```bash
+gcloud auth login
+gcloud config set project <project_id>
+```
+
 ## Connect to the cluster deployed on the cloud
 
 ```bash
 gcloud container clusters get-credentials primary-cluster --zone us-central1-a
-kubectl get nodes  # should show 2 nodes as Ready
+kubectl get nodes  # should show 1 node as Ready
 ```
 > If an error related to `gke-gcloud-auth-plugin` appears, it means we need to install the plugin. That can be done with the command `gcloud components install gke-gcloud-auth-plugin` 
 

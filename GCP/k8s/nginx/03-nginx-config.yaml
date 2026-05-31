@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nginx-config
-  namespace: nginx
-data:
-  nginx.conf: # Add the file path.

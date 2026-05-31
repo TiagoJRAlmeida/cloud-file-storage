@@ -29,7 +29,7 @@ Lastly, the Cloud version, folder `/GCP`. This one is the important one. However
 
 - The Kubernetes stuff:
     - The MinIO needs to be a Helm Chart. (Done, but need to see it better on the cloud context, primarily the PVC part.)
-    - The other's are correct I think, but missing a lot of things, like ServiceAccount, NetworkPolicy, Ingress, etc.
+    - The others are correct I think, but missing a lot of things, like ServiceAccount, NetworkPolicy, Ingress, etc.
     - Since I already tested a lot with K8s the past few days I can probably fix this quickly.
     - Add the cert-manager Helm Chart.
 
