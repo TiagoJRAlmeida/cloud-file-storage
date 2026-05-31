@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-netpol
+  namespace: api
+  labels:
+    app.kubernetes.io/part-of: api
+spec:
+  podSelector:
+    matchLabels:
+      app: api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - port: 8000
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: nginx  # only NGINX can call the API
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring  # Prometheus scraping
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP                             # DNS
+    - ports:
+        - port: 9000
+          protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: storage  # talk to MinIO

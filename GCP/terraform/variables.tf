@@ -32,15 +32,3 @@ variable "machine_type" {
   type        = string
   default     = "e2-small"
 }
-
-variable "minio_bucket_name" {
-  description = "Globally unique name for the GCS bucket used as MinIO backend"
-  type        = string
-  default     = "minio-bucket"
-}
-
-variable "minio_sa_id" {
-  description = "account_id for the MinIO GCP service account"
-  type        = string
-  default     = "minio-sa"
-}
