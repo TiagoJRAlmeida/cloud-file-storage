@@ -1,0 +1,40 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: "{{ .Values.fullname }}-netpol"
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/component: minio
+    app.kubernetes.io/part-of: minio
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Values.fullname }}               # applies to MinIO pods
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: 
+    - ports:
+      - port: {{ .Values.service.ports.api }}
+      from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: minio   # allow other minio pods (provisioning job)
+        - podSelector:
+            matchLabels:
+              app: api                            # allow your API pods
+        - podSelector:
+            matchLabels:
+              app: prometheus                     # allow Prometheus to scrape metrics
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP                           # allow DNS resolution
+    - ports:
+        - port: {{ .Values.service.ports.api }}
+      to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Values.fullname }}         # allow MinIO pods to talk to each other
+{{- end }}

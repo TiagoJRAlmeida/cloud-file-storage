@@ -1,0 +1,84 @@
+fullname: minio
+
+namespace: storage
+
+auth:
+  rootUser: ""
+  rootPassword: ""
+
+
+statefulSet:
+  replicas: 1
+  storageAmount: 5Gi
+
+
+provisioning:
+  enabled: true
+
+  networkPolicy:
+    enabled: true
+
+  buckets:
+    - name: files
+    - name: thumbnails
+    - name: tmp
+  policies:
+    - name: api-policy
+      statements:
+        - effect: Allow
+          actions:
+            - "s3:GetObject"
+            - "s3:PutObject"
+            - "s3:DeleteObject"
+            - "s3:ListBucket"
+          resources:
+            - "arn:aws:s3:::files/*"
+            - "arn:aws:s3:::thumbnails/*"
+            - "arn:aws:s3:::tmp/*"
+  users:
+    - username: api-service
+      password: "" # set via --set at install time
+      policies:
+        - api-policy
+
+
+service:
+  type: ClusterIP
+  ports:
+    api: 9000
+
+
+networkPolicy:
+  enabled: true
+
+
+metrics:
+  enabled: true 
+  prometheusRule:
+    rules:
+      - alert: MinIODown
+        expr: minio_health_live == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MinIO instance is down"
+
+      - alert: MinIOHighErrorRate
+        expr: |
+          rate(minio_http_requests_total{code=~"5.."}[5m])
+          /
+          rate(minio_http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MinIO error rate above 5%"
+
+      - alert: MinIOHighCPU
+        expr: rate(process_cpu_seconds_total{job="minio"}[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MinIO CPU usage above 80%"

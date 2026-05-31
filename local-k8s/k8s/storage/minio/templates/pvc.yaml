@@ -1,0 +1,14 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: "{{ .Values.fullname }}-pvc"
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/component: minio
+    app.kubernetes.io/part-of: minio
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.statefulSet.storageAmount | quote }}

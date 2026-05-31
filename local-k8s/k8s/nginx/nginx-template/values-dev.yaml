@@ -1,0 +1,74 @@
+# Replica count; fixed, no HPA needed for a reverse proxy
+replicaCount: 2
+
+# Your custom NGINX server block
+serverBlock: |-
+  server {
+    listen 8080;
+    listen 8443 ssl;
+    server_name _;
+
+    ssl_certificate /certs/tls.crt;
+    ssl_certificate_key /certs/tls.key;
+
+    resolver kube-dns.kube-system.svc.cluster.local valid=10s;
+
+    set $api_upstream http://api-service.api.svc.cluster.local:8000;
+
+    location /health {
+      return 200 'ok';
+      add_header Content-Type text/plain;
+    }
+
+    location /files/upload {
+      limit_req zone=upload burst=5;
+      proxy_pass $api_upstream;
+    }
+
+    location / {
+      limit_req zone=download burst=20;
+      proxy_pass $api_upstream;
+    }
+  }
+
+# Context-level config (rate limit zones, etc.)
+contextIncludes:
+  main: ""
+  events: ""
+  http: |
+    limit_req_zone $binary_remote_addr zone=upload:10m rate=10r/m;
+    limit_req_zone $binary_remote_addr zone=download:10m rate=60r/m;
+
+# TLS via cert-manager
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # or selfsigned for local
+  tls: true
+  selfSigned: false
+
+# Disable things you don't need
+pdb:
+  create: false
+
+# Enable metrics for Prometheus
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+  prometheusRule:
+    enabled: true
+
+# Service
+service:
+  type: LoadBalancer
+  ports:
+    http: 80
+    https: 443
+
+# ServiceAccount
+serviceAccount:
+  create: true
+
+# Disable stream block
+streamServerBlock: ""

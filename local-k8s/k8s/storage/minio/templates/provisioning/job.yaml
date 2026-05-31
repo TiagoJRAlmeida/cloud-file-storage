@@ -1,0 +1,83 @@
+{{- if .Values.provisioning.enabled }}
+{{- $minioAlias := "myminio" }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Values.fullname }}-provisioning-job"
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/component: provisioning
+    app.kubernetes.io/part-of: minio
+spec:
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: provisioning
+        app.kubernetes.io/part-of: minio
+    spec:
+      restartPolicy: OnFailure
+      terminationGracePeriodSeconds: 0
+      serviceAccountName: "{{ .Values.fullname }}-serviceaccount"
+      initContainers:
+        - name: wait-for-minio
+          image: busybox
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until nc -z {{ .Values.fullname }}-service {{ .Values.service.ports.api }}; do
+                echo "Waiting for MinIO...";
+                sleep 2;
+              done;
+              echo "MinIO is up";
+      containers:
+        - name: minio-provisioning
+          image: minio/mc:latest
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e;
+              echo "Starting MinIO provisioning";
+
+              mc alias set {{ $minioAlias }} \
+                http://{{ .Values.fullname }}-service:{{ .Values.service.ports.api }} \
+                $MINIO_ROOT_USER \
+                $MINIO_ROOT_PASSWORD;
+
+              {{- range $policy := .Values.provisioning.policies }}
+              mc admin policy create {{ $minioAlias }} {{ $policy.name }} /etc/ilm/policy-{{ $policy.name }}.json;
+              {{- end }}
+
+              {{- range $user := .Values.provisioning.users }}
+              mc admin user add {{ $minioAlias }} {{ $user.username }} {{ $user.password }};
+              {{- range $policy := $user.policies }}
+              mc admin policy attach {{ $minioAlias }} {{ $policy }} --user={{ $user.username }};
+              {{- end }}
+              {{- end }}
+
+              {{- range $bucket := .Values.provisioning.buckets }}
+              mc mb {{ $minioAlias }}/{{ $bucket.name }} --ignore-existing;
+              {{- end }}
+
+              echo "MinIO provisioning complete";
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.fullname }}-secret"
+                  key: root-user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.fullname }}-secret"
+                  key: root-password
+          volumeMounts:
+            - name: minio-provisioning
+              mountPath: /etc/ilm
+      volumes:
+        - name: minio-provisioning
+          configMap:
+            name: "{{ .Values.fullname }}-configmap"
+{{- end }}

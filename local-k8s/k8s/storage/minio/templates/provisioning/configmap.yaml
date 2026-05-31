@@ -1,0 +1,28 @@
+{{- if .Values.provisioning.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ .Values.fullname }}-configmap"
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/component: provisioning
+    app.kubernetes.io/part-of: minio
+data:
+  {{- range $policy := .Values.provisioning.policies }}
+  policy-{{ $policy.name }}.json: |
+      {{- $statementsLength := sub (len $policy.statements) 1 }}
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {{- range $i, $statement := $policy.statements }}
+          {
+            "Effect": "{{ default "Deny" $statement.effect }}"{{ if $statement.actions }},
+            "Action": {{ toJson $statement.actions }}{{end}}{{ if $statement.resources }},
+            "Resource": {{ toJson $statement.resources }}{{end}}{{ if $statement.condition }},
+            "Condition": {{ toJson $statement.condition }}{{end}}
+          }{{ if lt $i $statementsLength }},{{end }}
+          {{- end }}
+        ]
+      }
+  {{- end }}
+{{- end }}

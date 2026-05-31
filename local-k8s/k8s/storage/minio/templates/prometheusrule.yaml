@@ -1,0 +1,14 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: "{{ .Values.fullname }}-prometheusrule"
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/part-of: minio
+spec:
+  groups:
+    - name: minio
+      rules: {{ toYaml .Values.metrics.prometheusRule.rules | nindent 8 }}
+{{- end }}
