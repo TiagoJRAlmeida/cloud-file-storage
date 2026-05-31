@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.fullname }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/component: minio
+    app.kubernetes.io/part-of: minio
+spec:
+  serviceName: minio-headless   # must point to a headless service
+  replicas: {{ .Values.statefulSet.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.fullname }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.fullname }}
+    spec:
+      containers:
+        - name: {{ .Values.fullname }}
+          image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+          args: ["server", "/data"]
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.fullname }}-secret"
+                  key: root-user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.fullname }}-secret"
+                  key: root-password
+          ports:
+            - containerPort: 9000
+          # I think this changes on the cloud version since it uses a cloud Storage Unit. 
+          volumeMounts:
+            - name: "{{ .Values.fullname }}-storage"
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: "{{ .Values.fullname }}-storage"
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.statefulSet.storageAmount | quote }}
