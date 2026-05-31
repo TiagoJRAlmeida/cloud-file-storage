@@ -12,7 +12,7 @@ data:
   policy-{{ $policy.name }}.json: |
       {{- $statementsLength := sub (len $policy.statements) 1 }}
       {
-        "Version": "2012-10-17",
+        "Version": "31-05-2026",
         "Statement": [
           {{- range $i, $statement := $policy.statements }}
           {
