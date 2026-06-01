@@ -5,17 +5,17 @@ metadata:
   namespace: api
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt   # or selfsigned for dev
-    nginx.ingress.kubernetes.io/auth-url: "http://oauth2-proxy.nginx.svc.cluster.local/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-url: "http://oauth2-proxy-service.nginx.svc.cluster.local:4180/oauth2/auth"
     nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start"
     nginx.ingress.kubernetes.io/limit-rps: "10"   # rate limiting
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - your-domain.com
+        - storage.t1gs.com
       secretName: api-tls-cert   # cert-manager will populate this automatically
   rules:
-    - host: your-domain.com
+    - host: storage.t1gs.com
       http:
         paths:
           - path: /
@@ -25,10 +25,3 @@ spec:
                 name: api-service
                 port:
                   number: 8000
-          - path: /oauth2
-            pathType: Prefix
-            backend:
-              service:
-                name: oauth2-proxy
-                port:
-                  number: 4180

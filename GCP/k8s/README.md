@@ -26,7 +26,7 @@ kubectl apply -f nginx/
 ## Verify if it is running
 
 ```bash
-kubectl get pods -n storage
+kubectl get pods --all-namespaces
 # wait until STATUS shows Running
 
 kubectl get pvc -n storage

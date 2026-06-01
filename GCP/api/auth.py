@@ -10,7 +10,7 @@ SECRET_KEY = os.getenv("AUTH_SECRET_KEY", "12345")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-pwd_context = CryptContext(schemes=["bcrypt"])
+pwd_context = CryptContext(schemes=["argon2"])
 bearer_scheme = HTTPBearer()
 
 # Fake user's to test. Remove later

@@ -24,8 +24,8 @@ spec:
       serviceAccountName: api-serviceaccount
       containers:
         - name: api
-          image: local-k8s-api:latest
-          imagePullPolicy: Never
+          image: tiagojralmeida/storage-api:v2
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8000

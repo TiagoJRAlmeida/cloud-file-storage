@@ -26,16 +26,16 @@ spec:
             - /bin/sh
             - -c
             - |
-              until nc -z {{ .Values.fullname }}-service {{ .Values.service.ports.api }}; do
+              until wget -q --spider http://{{ .Values.fullname }}-service:{{ .Values.service.ports.api }}/minio/health/live; do
                 echo "Waiting for MinIO...";
                 sleep 2;
               done;
-              echo "MinIO is up";
+              echo "MinIO is up";      
       containers:
         - name: minio-provisioning
           image: minio/mc:latest
           command:
-            - /bin/bash
+            - /bin/sh
             - -c
             - |
               set -e;
