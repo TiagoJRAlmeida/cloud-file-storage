@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: observability
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    rule_files:
+      - /etc/prometheus/rules.yml
+
+    scrape_configs:
+      - job_name: 'api'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: ['api']
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            target_label: __metrics_path__
+          - source_labels: [__meta_kubernetes_pod_ip, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            target_label: __address__
+            separator: ':'
+
+      - job_name: 'minio'
+        metrics_path: /minio/v2/metrics/cluster
+        static_configs:
+          - targets: ['minio-service.storage.svc.cluster.local:9000']
+
+  rules.yml: |
+    groups:
+      - name: api
+        rules:
+          - alert: HighErrorRate
+            expr: rate(api_requests_total{status=~"5.."}[5m]) / rate(api_requests_total[5m]) > 0.05
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Error rate above 5%"
+
+          - alert: HighLatency
+            expr: histogram_quantile(0.95, rate(api_request_latency_seconds_bucket[5m])) > 2
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "P95 latency above 2s"
+
+          - alert: HighCPU
+            expr: rate(process_cpu_seconds_total[5m]) * 100 > 80
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "CPU above 80%"

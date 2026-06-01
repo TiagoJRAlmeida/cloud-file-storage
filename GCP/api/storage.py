@@ -13,14 +13,24 @@ MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://minio-service:9000")
 MINIO_ACCESS = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET = os.getenv("MINIO_SECRET_KEY", "minioadmin")
 BUCKET_NAME = "files"
+MINIO_PUBLIC_ENDPOINT = os.getenv("MINIO_PUBLIC_ENDPOINT", "http://localhost:9000")
 
 s3 = boto3.client(
     "s3",
-    endpoint_url=MINIO_ENDPOINT,
+    endpoint_url=MINIO_ENDPOINT,  # internal endpoint for all operations
     aws_access_key_id=MINIO_ACCESS,
     aws_secret_access_key=MINIO_SECRET,
     config=Config(signature_version="s3v4"),
-    region_name="us-east-1",  # MinIO ignores this but boto3 requires it
+    region_name="us-east-1",
+)
+
+s3_presign = boto3.client(
+    "s3",
+    endpoint_url=MINIO_PUBLIC_ENDPOINT,  # public endpoint only for presigned URLs
+    aws_access_key_id=MINIO_ACCESS,
+    aws_secret_access_key=MINIO_SECRET,
+    config=Config(signature_version="s3v4"),
+    region_name="us-east-1",
 )
 
 
@@ -91,7 +101,7 @@ def get_user_storage_used(username: str) -> int:
 
 
 def generate_presigned_url(username: str, file_id: str, ttl_seconds: int) -> str:
-    return s3.generate_presigned_url(
+    return s3_presign.generate_presigned_url(
         "get_object",
         Params={"Bucket": BUCKET_NAME, "Key": f"{username}/{file_id}"},
         ExpiresIn=ttl_seconds,
