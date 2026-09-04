@@ -30,6 +30,7 @@ data:
 
       - job_name: 'minio'
         metrics_path: /minio/v2/metrics/cluster
+        bearer_token: eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJwcm9tZXRoZXVzIiwic3ViIjoiYWRtaW51c2VyIiwiZXhwIjo0OTMzOTI2NjAwfQ.KLLVSoborqrWiQ0kLoN8hULZzXkPOFglJAXpE5JD0nLnCml_FbhNsv7vq7iiTIUrNsZ0t6LIktCz9j3Wn_m5TA
         static_configs:
           - targets: ['minio-service.storage.svc.cluster.local:9000']
 
